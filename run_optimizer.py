@@ -14,9 +14,9 @@ def basic_optimizer(arch_info, network_info, schedule_info=None, basic=False, ve
     
     level_costs = cm.cost_model.get_level_costs(resource, opt_result[1], layer, verbose)
     if verbose or basic:
-        print "best energy: ", opt_result[0]
-        print "cost for each level: ", level_costs #TODO
-        print "best schedule: ", cm.utils.print_loop_nest(opt_result[1])
+        print("best energy: ", opt_result[0])
+        print("cost for each level: ", level_costs) #TODO
+        print("best schedule: ", cm.utils.print_loop_nest(opt_result[1]))
     return opt_result[0]
 
 
@@ -36,15 +36,15 @@ def mem_explore_optimizer(arch_info, network_info, schedule_info, verbose=False)
     cost0 = arch_info["access_cost"][0]
     cost1 = arch_info["access_cost"][1]
     i = 0
-    for x in xrange(explore_points[0]):
+    for x in range(explore_points[0]):
         arch_info["capacity"][0] = capacity0 * (arch_info["capacity_scale"][0]**x)
         arch_info["access_cost"][0] = cost0 * (arch_info["access_cost_scale"][0]**x)
-        for y in xrange(explore_points[1]):
+        for y in range(explore_points[1]):
             #if x == 0 and y < 1:
             #    continue
             arch_info["capacity"][1] = capacity1 * (arch_info["capacity_scale"][1]**y)
             arch_info["access_cost"][1] = cost1 * (arch_info["access_cost_scale"][1]**y)
-            print arch_info
+            print(arch_info)
             energy = basic_optimizer(arch_info, network_info, schedule_info, False, verbose)
             energy_list[x][y] = energy
             cur_point = network_info["layer_info"] + arch_info["capacity"][:-1] + [energy]
@@ -52,8 +52,8 @@ def mem_explore_optimizer(arch_info, network_info, schedule_info, verbose=False)
 #            np.savetxt(output_filename, summary_array, delimiter=",")
             i += 1
 
-    print list(energy_list)
-    print "optiaml energy for all memory systems: ", np.min(np.array(energy_list))
+    print(list(energy_list))
+    print("optiaml energy for all memory systems: ", np.min(np.array(energy_list)))
 
 def mac_explore_optimizer(arch_info, network_info, schedule_info, verbose=False):
     
@@ -66,7 +66,7 @@ def mac_explore_optimizer(arch_info, network_info, schedule_info, verbose=False)
         dataflow_res.append[energy]
         
     if verbose:
-        print "optimal energy for all dataflows: ", dataflow_res
+        print("optimal energy for all dataflows: ", dataflow_res)
 
     return dataflow_res
 
@@ -81,7 +81,7 @@ def dataflow_explore_optimizer(arch_info, network_info, file_name, verbose=False
     dataflow_tb = cm.mapping_point_generator.dataflow_exploration(resource, layer, file_name, verbose)
     
     if verbose:
-        print "dataflow table done "
+        print("dataflow table done ")
 
 
 if __name__ == "__main__":
@@ -103,5 +103,5 @@ if __name__ == "__main__":
     elif args.type == "dataflow_explore":
         dataflow_explore_optimizer(arch_info, network_info, args.name, args.verbose)
     end = time.time()
-    print "elapsed time: ", (end-start)
+    print("elapsed time: ", (end-start))
 

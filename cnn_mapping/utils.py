@@ -1,16 +1,16 @@
-import loop_enum as le
-import buffer_enum as be
+from . import loop_enum as le
+from . import buffer_enum as be
 
 def print_loop_nest(point):
-    loop_orders = zip(*point.loop_orders)
-    loop_blockings = zip(*point.loop_blockings)
-    loop_partitionings = zip(*point.loop_partitionings)
+    loop_orders = list(zip(*point.loop_orders))
+    loop_blockings = list(zip(*point.loop_blockings))
+    loop_partitionings = list(zip(*point.loop_partitionings))
     para_dims = point.para_loop_dim
     num_level = len(loop_orders)
     order_lists = []
-    for level in xrange(num_level):
+    for level in range(num_level):
         order_list = [None] * le.NUM
-        for order in xrange(le.NUM):
+        for order in range(le.NUM):
             if loop_blockings[level][order] != 1 or loop_partitionings[level][order] != 1 :
                 order_list[loop_orders[level][order]] = (le.table[order], 
                                                         loop_blockings[level][order],
@@ -18,5 +18,5 @@ def print_loop_nest(point):
                 
         order_lists.append(order_list) 
 
-    print order_lists, para_dims
+    print(order_lists, para_dims)
 

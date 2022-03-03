@@ -1,6 +1,6 @@
 import json
 import os
-import loop_enum as le
+from . import loop_enum as le
 
 
 def extract_arch_info(arch_file):
@@ -30,7 +30,7 @@ def extract_arch_info(arch_file):
         data["mac_capacity"] = 0
     if "parallel_mode" not in data:
         data["parallel_mode"] = [0, ] * data["mem_levels"]
-        for level in xrange(data["mem_levels"]):
+        for level in range(data["mem_levels"]):
             if data["parallel_count"][level] != 1:
                 data["parallel_mode"][level] = 1
     else:
@@ -62,7 +62,7 @@ def extract_network_info(network_file):
     if "stride_height" not in data:
         data["stride_height"] = 1
    
-    layer_summary = data.values()
+    layer_summary = list(data.values())
     data['layer_info'] = layer_summary
     data['layer_name'] = os.path.splitext(os.path.basename(network_file))[0]
 

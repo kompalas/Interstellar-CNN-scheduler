@@ -7,8 +7,9 @@ from operator import add
 import copy
 import math
 
-import loop_enum as le
-import buffer_enum as be
+from . import loop_enum as le
+from . import buffer_enum as be
+from functools import reduce
 
 
 def get_comp_cost(layer):
@@ -61,7 +62,7 @@ def get_hinted_para(level, hint):
     assert hint
 
     hinted_para = 1
-    for loop in xrange(le.NUM):
+    for loop in range(le.NUM):
         if loop in hint:
             hinted_loop_para = hint[loop][level][2]
             hinted_para *= hinted_loop_para
@@ -76,7 +77,7 @@ def valid_dataflow(resource, hint):
     '''
     num_levels = resource.buffer_levels()
 
-    for level in xrange(num_levels):
+    for level in range(num_levels):
         if resource.paras[level].count != 1 and \
             get_hinted_para(level, hint) < (resource.paras[level].count * resource.utilization_threshold):
             return False
@@ -418,7 +419,7 @@ def get_array_access_and_cost(level, para, access_list, point):
     nearest_pe_cost = para_cost
 
     [if_block_access, of_block_access, fl_block_access] = access_list
-    partitions = zip(*point.loop_partitionings)[level]
+    partitions = list(zip(*point.loop_partitionings))[level]
     para_dim = point.para_loop_dim[level]
 
     partitions_nearest = [1,]*le.NUM
@@ -426,7 +427,7 @@ def get_array_access_and_cost(level, para, access_list, point):
     across_block_cost = [0]*array_dim
 
     if para_mode == 1:
-        for i in xrange(len(para_dim)):
+        for i in range(len(para_dim)):
             para_index = para_dim[i]
             partitions_far.append([1,]*le.NUM)
             if len(para_index) == 1:
@@ -446,7 +447,7 @@ def get_array_access_and_cost(level, para, access_list, point):
 
         array_access = [[array_if_block_access_nearest, array_of_block_access_nearest, array_fl_block_access_nearest]]
 
-        for i in xrange(array_dim): # Don't get it
+        for i in range(array_dim): # Don't get it
             if_partitions_far = partitions_far[i][le.FX] * partitions_far[i][le.FY] * partitions_far[i][le.OC]
             if_partitions_far = if_partitions_far if if_partitions_far != 1 else 0
             of_partitions_far = partitions_far[i][le.FX] * partitions_far[i][le.FY] * partitions_far[i][le.IC]
@@ -463,7 +464,7 @@ def get_array_access_and_cost(level, para, access_list, point):
         return [array_access, [nearest_pe_cost] + across_block_cost]
 
     elif para_mode == 2:
-        for i in xrange(len(para_dim)):
+        for i in range(len(para_dim)):
             para_index = para_dim[i]
             for j in para_index:
                 partitions_nearest[j] = partitions[j]
@@ -502,7 +503,7 @@ def get_access(point, layer, resource):
     mac_capacity = resource.mac_capacity
 
     access_list = []
-    for level in xrange(num_levels):
+    for level in range(num_levels):
         if_block_access = get_if_access(level, point, layer, mac_capacity)
         of_block_access = 2 * get_of_access(level, point, layer, mac_capacity) - 1
         fl_block_access = get_fl_access(level, point, layer, mac_capacity)
@@ -510,7 +511,7 @@ def get_access(point, layer, resource):
 
     #para_mode = [e.access_mode for i, e in enumerate(resource.paras) if e.access_mode != 0]
     para_mode_level = [i for i, e in enumerate(resource.paras) if e.access_mode != 0]
-    partitions = zip(*point.loop_partitionings)
+    partitions = list(zip(*point.loop_partitionings))
     array_costs = []
     if para_mode_level:
         # access at array level
@@ -559,12 +560,12 @@ def opt_get_access(num_levels, point, mac_capacity):
 
     blocking_accum_arr = []
     partitioning_accum_arr = []
-    for i in xrange(le.NUM):
+    for i in range(le.NUM):
         ba_current_level = [1]
         pa_current_level = [1]
         ba_tmp = 1
         pa_tmp = 1
-        for level in xrange(num_levels-1, -1, -1):
+        for level in range(num_levels-1, -1, -1):
             ba_tmp = ba_tmp * point.loop_blockings[i][level]
             pa_tmp = pa_tmp * point.loop_partitionings[i][level]
             ba_current_level.append(ba_tmp)
@@ -574,7 +575,7 @@ def opt_get_access(num_levels, point, mac_capacity):
         partitioning_accum_arr.append(pa_current_level[::-1])
 
     access_arr = np.zeros((num_levels, 3))
-    for level in xrange(num_levels):
+    for level in range(num_levels):
         access_arr[level][0] = opt_get_if_access(level, point, blocking_accum_arr, partitioning_accum_arr)
         access_arr[level][1] = 2 * opt_get_of_access(level, point, blocking_accum_arr, partitioning_accum_arr) - 1
         access_arr[level][2] = opt_get_fl_access(level, point, blocking_accum_arr, partitioning_accum_arr)
@@ -584,7 +585,7 @@ def opt_get_access(num_levels, point, mac_capacity):
 def get_bank_size(point, layer, level):
 
     blocking_accum_list = []
-    for i in xrange(le.NUM):
+    for i in range(le.NUM):
         blocking_accum_list.append(reduce(mul, point.loop_blocking(i)[:level+1], 1))
 
     if_bank_size = get_if_bank_size(blocking_accum_list, layer)
@@ -597,9 +598,9 @@ def get_block_size(point, layer, level):
 
     blocking_accum_list = []
     partitioning_accum_list = []
-    partitioning_reshape = zip(*point.loop_partitionings)
+    partitioning_reshape = list(zip(*point.loop_partitionings))
     partitioning_list = partitioning_reshape[level]
-    for i in xrange(le.NUM):
+    for i in range(le.NUM):
         blocking_accum_list.append(reduce(mul, point.loop_blocking(i)[:level+1], 1))
         partitioning_accum_list.append(reduce(mul, point.loop_partitioning(i)[:level+1], 1)) #FIXME inclusive mode also duplicates data
 
@@ -617,7 +618,7 @@ def get_block_sizes(num_levels, point, layer):
     '''
     bank_list = []
     block_list = []
-    for level in xrange(num_levels):
+    for level in range(num_levels):
         block_list.append(get_block_size(point, layer, level))
         bank_list.append(get_bank_size(point, layer, level))
 
@@ -709,12 +710,12 @@ def valid_mapping_point_current_level(resource, point, layer, level, verbose=Fal
         valid_size = fit_in_level(resource.buffer(level).capacity,
              get_block_size(point, layer, level), resource.invalid_underutilized,level,resource.memory_partitions)
 
-    partitioning = zip(*(point.loop_partitionings))
+    partitioning = list(zip(*(point.loop_partitionings)))
     valid_para = valid_partition_number(resource, partitioning, level)
 
     if verbose == 3:
-        print "Level ", level, ": Partitioned block size fit in bank: ", valid_size
-        print "Level ", level, ": Partition number is valid: ", valid_para
+        print("Level ", level, ": Partitioned block size fit in bank: ", valid_size)
+        print("Level ", level, ": Partition number is valid: ", valid_para)
 
     return valid_size and valid_para
 
@@ -744,14 +745,14 @@ def valid_blocking_size_current_level(resource, point, layer, level, verbose=Fal
 
 
 def valid_blocking_size(resource, point, layer, verbose=False):
-    for level in xrange(resource.buffer_levels()):
+    for level in range(resource.buffer_levels()):
         if not valid_blocking_size_current_level(resource, point, layer, level, verbose):
             return False
     return True
 
 
 def valid_mapping_point(resource, point, layer, verbose=False):
-    for i in xrange(resource.buffer_levels()):
+    for i in range(resource.buffer_levels()):
         if not valid_mapping_point_current_level(resource, point, layer, i, verbose):
             return False
     return True
@@ -766,7 +767,7 @@ def get_total_access_cost(resource, array_cost):
     addition_levels = len(para_index)
 
     delta = 1
-    for i in xrange(addition_levels):
+    for i in range(addition_levels):
         index = para_index[i]
         total_access_cost.insert(index+delta, array_cost[i])
         delta += 1
@@ -795,12 +796,12 @@ def get_array_level_cost(resource, point, layer_size, level, next_level_access, 
     level_access, level_cost = get_array_access_and_cost(level, resource.paras[level], next_level_access, point)
 
     total_cost = 0
-    for i in xrange(len(level_access)):
-        buffer_access = map(mul, level_access[i], layer_size)
+    for i in range(len(level_access)):
+        buffer_access = list(map(mul, level_access[i], layer_size))
         total_cost += sum(buffer_access) *level_cost[i]
 
     if verbose >= 3:
-        print "Level ", level, " array level access: ", level_access
+        print("Level ", level, " array level access: ", level_access)
 
     return total_cost
 
@@ -822,7 +823,7 @@ def get_array_and_curr_level_cost(resource, point, layer, level, verbose=False):
     [if_access, of_access, fl_access] = level_access
 
     buffer_level_access = [if_access, 2*of_access-1, fl_access]
-    total_buffer_access = map(mul, buffer_level_access, layer_size)
+    total_buffer_access = list(map(mul, buffer_level_access, layer_size))
     # level_cost = sum(total_buffer_access) * resource.access_cost[level]
     level_cost = 0
     for i in range(len(total_buffer_access)):
@@ -833,7 +834,7 @@ def get_array_and_curr_level_cost(resource, point, layer, level, verbose=False):
     # level_cost = sum(operand_costs)
 
     if verbose >= 3:
-        print "Level ", level, " access: ", buffer_level_access
+        print("Level ", level, " access: ", buffer_level_access)
 
     level_cost += get_array_level_cost(resource, point, layer_size, level-1, level_access, verbose)
 
@@ -854,7 +855,7 @@ def get_level_cost(resource, point, layer, level, verbose=False):
                     2 * get_of_access(level, point, layer, mac_capacity) - 1, \
                     get_fl_access(level, point, layer, mac_capacity)]
     
-    buffer_access = map(mul, level_access, layer_size)
+    buffer_access = list(map(mul, level_access, layer_size))
     # Inputs, weights, and outputs may have different costs
     # level_cost = sum(buffer_access) * resource.access_cost[level]
     level_cost = 0
@@ -869,7 +870,7 @@ def get_level_cost(resource, point, layer, level, verbose=False):
 
 
     if verbose >= 3:
-        print "Level", level, " access: ", level_access
+        print("Level", level, " access: ", level_access)
     return level_cost
 
 
@@ -879,17 +880,17 @@ def get_total_access(resource, point, layer, verbose=False):
     access_list, array_cost  = get_access(point, layer, resource)
 
     if verbose >= 3:
-        print "access breakdown: ", access_list
+        print("access breakdown: ", access_list)
 
     total_level_access = []
-    for i in xrange(len(access_list)):
+    for i in range(len(access_list)):
         ''' List of total access of each buffer at level i'''
         if not isinstance(access_list[i][0], list):
-            buffer_access = map(mul, access_list[i], layer_size)
+            buffer_access = list(map(mul, access_list[i], layer_size))
             total_level_access.append(sum(buffer_access))
         else :
-            for j in xrange(len(access_list[i])):
-                buffer_access = map(mul, access_list[i][j], layer_size)
+            for j in range(len(access_list[i])):
+                buffer_access = list(map(mul, access_list[i][j], layer_size))
                 total_level_access.append(sum(buffer_access))
 
     return total_level_access
@@ -900,7 +901,7 @@ def get_level_costs(resource, point, layer, verbose=False):
     num_levels = resource.buffer_levels()
 
     level_energy = []
-    for level in xrange(num_levels):
+    for level in range(num_levels):
         level_energy.append(get_level_cost(resource, point, layer, level))
 
     para_index = [i for i, e in enumerate(resource.paras) if e.access_mode != 0]
@@ -931,18 +932,18 @@ def get_block_cost(resource, point, layer, verbose=False):
 
 
     block_costs = [0.0, 0.0, 0.0]
-    for i in xrange(len(total_access_cost)):
+    for i in range(len(total_access_cost)):
         buffer_access = [a*b for a,b in zip(access_list[i], layer_size)]
         block_cost = [x * total_access_cost[i] for x in buffer_access]
-        block_costs = map(add, block_cost, block_costs)
+        block_costs = list(map(add, block_cost, block_costs))
 
     if verbose:
-        print 'access_list: ', access_list
+        print('access_list: ', access_list)
         bank_size_list, block_size_list = get_block_sizes(num_levels, point, layer)
-        print 'bank_size_list: ', bank_size_list 
-        print 'block_size_list: ', block_size_list
-        print 'layer_size: ', layer_size
-        print 'block costs: ', block_costs
+        print('bank_size_list: ', bank_size_list) 
+        print('block_size_list: ', block_size_list)
+        print('layer_size: ', layer_size)
+        print('block costs: ', block_costs)
 
     return block_costs
 
@@ -966,24 +967,24 @@ def get_cost(resource, point, layer, verbose=False):
     assert len(total_access_cost) == len(access_list)
 
     total_cost = 0.0
-    for i in xrange(len(total_access_cost)):
+    for i in range(len(total_access_cost)):
         ''' List of total access of each buffer at level i'''
         if not isinstance(access_list[i][0], list):
-            buffer_access = map(mul, access_list[i], layer_size)
+            buffer_access = list(map(mul, access_list[i], layer_size))
             total_cost += sum(buffer_access) * total_access_cost[i]
         else :
-            for j in xrange(len(access_list[i])):
-                buffer_access = map(mul, access_list[i][j], layer_size)
+            for j in range(len(access_list[i])):
+                buffer_access = list(map(mul, access_list[i][j], layer_size))
                 total_cost += sum(buffer_access) * total_access_cost[i][j]   
 
     if verbose:
-        print 'access_cost: ', total_access_cost
-        print 'access_list: ', access_list
+        print('access_cost: ', total_access_cost)
+        print('access_list: ', access_list)
         bank_size_list, block_size_list = get_block_sizes(num_levels, point, layer)
-        print 'bank_size_list: ', bank_size_list 
-        print 'block_size_list: ', block_size_list
-        print 'layer_size: ', layer_size
-        print 'total cost: ', total_cost
+        print('bank_size_list: ', bank_size_list) 
+        print('block_size_list: ', block_size_list)
+        print('layer_size: ', layer_size)
+        print('total cost: ', total_cost)
    
     #return total_cost
     return total_cost, total_access_cost, access_list,layer_size

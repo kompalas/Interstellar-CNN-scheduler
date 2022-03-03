@@ -1,11 +1,11 @@
 '''
 Top level function of optimization framework
 '''
-import mapping_point_generator
-import cost_model
+from . import mapping_point_generator
+from . import cost_model
 
-import loop_enum as le
-import buffer_enum as be 
+from . import loop_enum as le
+from . import buffer_enum as be 
 
 def opt_optimizer(resource, layer, hint=None, verbose=False):
     '''
@@ -20,8 +20,8 @@ def opt_optimizer(resource, layer, hint=None, verbose=False):
     # assert total_cost == smallest_cost
 
     if verbose:
-        print smallest_cost
-        print "Best mapping_point: ", best_mapping_point.loop_blockings, best_mapping_point.loop_partitionings, best_mapping_point.loop_orders
+        print(smallest_cost)
+        print("Best mapping_point: ", best_mapping_point.loop_blockings, best_mapping_point.loop_partitionings, best_mapping_point.loop_orders)
     return [smallest_cost, best_mapping_point, access_list]
  
 def optimizer(resource, layer, hint=None, verbose=False):
@@ -42,13 +42,13 @@ def optimizer(resource, layer, hint=None, verbose=False):
             smallest_cost = cost
             best_mapping_point = mapping_point
             if verbose:
-                print "Current smallest cost: ", smallest_cost
-                print "Current best mapping_point: ", mapping_point.loop_blockings, mapping_point.loop_orders
+                print("Current smallest cost: ", smallest_cost)
+                print("Current best mapping_point: ", mapping_point.loop_blockings, mapping_point.loop_orders)
     #print counter
     
     if verbose:
-        print smallest_cost
-        print "Best mapping_point: ", best_mapping_point.loop_blockings, mapping_point.loop_partitionings, best_mapping_point.loop_orders
+        print(smallest_cost)
+        print("Best mapping_point: ", best_mapping_point.loop_blockings, mapping_point.loop_partitionings, best_mapping_point.loop_orders)
 
     return [smallest_cost, best_mapping_point] 
 

@@ -5,6 +5,7 @@ Hardware resource types.
 from collections import namedtuple
 from operator import mul
 import math
+from functools import reduce
 
 class Buffer(namedtuple('Buffer',
                         ['capacity', 'access_cost', 'unit_static_cost'])):
@@ -16,8 +17,8 @@ class Buffer(namedtuple('Buffer',
     Buffer attributes include capacity, access cost, unit static cost.
 
     Capacity is for a single buffer (If current level has parallelism,
-    then it is the capacity of the buffer bank inside each parallel 
-    units); access cost is the cost per access; 
+    then it is the capacity of the buffer bank inside each parallel
+    units); access cost is the cost per access;
     unit static cost is the static cost per time unit.
     '''
     pass
@@ -31,9 +32,9 @@ class Parallelism(namedtuple('Parallelism',
 
     Parallelism attributes include count and access_mode.
 
-    Count is the number of parallel units. 
+    Count is the number of parallel units.
 
-    Access mode is the mode of access non-private data, 
+    Access mode is the mode of access non-private data,
     for example, whether access neighborhood PE, or
     goes to next level buffer.
 
@@ -41,9 +42,9 @@ class Parallelism(namedtuple('Parallelism',
 
     Array dimension is the dimension of PE array, whether it is 1D or 2D.
 
-    Array width is the width of PE array, if 1D array, same as array dimension. 
+    Array width is the width of PE array, if 1D array, same as array dimension.
     if 2D array, sqrt(array_dim)
-    
+
     Note: shared buffer level is the level
     index of the lowest shared buffer for this parallelism.
     '''
@@ -71,15 +72,15 @@ class Resource(object):
     '''
 
     def __init__(self, buf_capacity_list, buf_access_cost_list,
-                 buf_unit_static_cost_list, para_count_list,  
-                 mac_capacity=1, partition_mode=None, array_access_cost=None, 
+                 buf_unit_static_cost_list, para_count_list,
+                 mac_capacity=1, partition_mode=None, array_access_cost=None,
                  array_dim = None, utilization_threshold = 0, replication=True,memory_partitions=[[0,0,0],[0,0,0],[0,0,0]],invalid_underutilized=True):
 
         # Buffers.
         assert len(buf_capacity_list) == len(buf_access_cost_list)
         assert len(buf_capacity_list) == len(buf_unit_static_cost_list)
         assert len(buf_capacity_list) == len(para_count_list)
-        
+
         self.bufs = [Buffer(*t) for t in zip(buf_capacity_list, \
             buf_access_cost_list, buf_unit_static_cost_list)]
 
@@ -91,11 +92,11 @@ class Resource(object):
             partition_mode = [0] * len(para_count_list)
         else :
             array_level = 0
-            for i in xrange(self.num_levels):
+            for i in range(self.num_levels):
                 # when using non-default partition mode, the parallelism
                 # count needs to be large than 1
-                assert partition_mode[i] == 0 or para_count_list <= 1 \
-                       or (partition_mode[i] > 0 and para_count_list > 1)
+                assert partition_mode[i] == 0 or len(para_count_list) <= 1 \
+                       or (partition_mode[i] > 0 and len(para_count_list) > 1)
                 if partition_mode[i] == 1 or partition_mode[i] == 2:
                     array_access_costs[i] = array_access_cost[array_level]
                     array_level += 1
@@ -109,8 +110,8 @@ class Resource(object):
             array_dim = [2 if e != 1 else 1 for e in para_count_list]
 
         # LMEI always assume square-shape array, could change later
-        array_width = [para_count_list[i] if array_dim[i] == 1 else int(math.sqrt(para_count_list[i])) for i in xrange(self.num_levels)]
- 
+        array_width = [para_count_list[i] if array_dim[i] == 1 else int(math.sqrt(para_count_list[i])) for i in range(self.num_levels)]
+
         self.paras = [Parallelism(*t) for t in zip(para_count_list, \
             partition_mode, array_access_costs, array_dim, array_width)]
         self.access_cost = buf_access_cost_list
@@ -122,18 +123,18 @@ class Resource(object):
         self.array_access_cost = array_access_cost
         self.para_count_list = para_count_list
         self.utilization_threshold = utilization_threshold
-        self.memory_partitions = memory_partitions 
+        self.memory_partitions = memory_partitions
         self.memory_partitions.append([None]*3)#do not check for invalid_underutilized at last memory level
         self.replication = replication
         self.invalid_underutilized = invalid_underutilized
-        
+
 
 
     @classmethod
     def arch(cls, info):
         return cls(info["capacity"], info["access_cost"], info["static_cost"],
                         info["parallel_count"], info["mac_capacity"], info["parallel_mode"],
-                        info["parallel_cost"], info["array_dim"], info["utilization_threshold"], info["replication"],info["memory_partitions"], info['invalid_underutilized'])  
+                        info["parallel_cost"], info["array_dim"], info["utilization_threshold"], info["replication"],info["memory_partitions"], info['invalid_underutilized'])
 
     def buffer_levels(self):
         '''

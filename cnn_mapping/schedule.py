@@ -2,7 +2,7 @@
 Schedule hint
 '''
 
-import loop_enum as le
+from . import loop_enum as le
 
 class Schedule(object):
     '''
@@ -26,10 +26,10 @@ class Schedule(object):
         else:
             self.partition_loops = partition_loops       
 
-        num_levels = len(schedule_hint.values()[0])
+        num_levels = len(list(schedule_hint.values())[0])
         hint_para_index = {}
         for loop in schedule_hint:
-            for level in xrange(num_levels):
+            for level in range(num_levels):
                 if schedule_hint[loop][level] != None and schedule_hint[loop][level][2] != None:
                     if level not in hint_para_index:
                         hint_para_index[level] = [loop]
