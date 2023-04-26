@@ -3,7 +3,10 @@ import numpy as np
 import argparse
 import math
 import time
+import re
 import cnn_mapping as cm
+from glob import glob
+
 
 def basic_optimizer(arch_info, network_info, schedule_info=None, basic=False, verbose=False):    
 
@@ -85,23 +88,50 @@ def dataflow_explore_optimizer(arch_info, network_info, file_name, verbose=False
 
 
 if __name__ == "__main__":
+
+    # root directory of this project
+    maindir = os.path.dirname(__file__)
+    layerdir = os.path.join(maindir, 'examples', 'model_layers')
+    layer_files = glob(f"{layerdir}/*.json")
+    assert len(layer_files) > 0, f"No files that describe DNN layers were found under {layerdir}"
+
+    # define options for DNN models
+    ALL_MODELS = list(set([re.search(".*/(.*?)_", layer_file).group(1) for layer_file in layer_files]))
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("type", choices=["basic", "mem_explore", "dataflow_explore"], help="optimizer type")
-    parser.add_argument("arch", help="architecture specification")
-    parser.add_argument("network", help="network specification")
+    parser.add_argument("-t", "--type", required=True, choices=["basic", "mem_explore", "dataflow_explore"],
+                        default="basic", help="optimizer type")
+    parser.add_argument("-a", "--arch", required=True, help="architecture specification")
+    #parser.add_argument("network", help="network specification")
+    parser.add_argument("-m", "--model", required=True, choices=ALL_MODELS, default="resnet50",
+                        help="model name")
+    parser.add_argument("-d", "--dataset", required=True, choices=['cifar10', 'cifar100', 'imagenet'],
+                        default='imagenet', help='dataset name')
     parser.add_argument("-s", "--schedule", help="restriction of the schedule space")
     parser.add_argument("-n", "--name", default="dataflow_table", help="name for the dumped pickle file")
     parser.add_argument("-v", "--verbose", action='count', help="vebosity")
     args = parser.parse_args()
 
-    start = time.time()
-    arch_info, network_info, schedule_info = cm.extract_input.extract_info(args)    
-    if args.type == "basic":
-        basic_optimizer(arch_info, network_info, schedule_info, True, args.verbose)
-    elif args.type == "mem_explore":
-        mem_explore_optimizer(arch_info, network_info, schedule_info, args.verbose)
-    elif args.type == "dataflow_explore":
-        dataflow_explore_optimizer(arch_info, network_info, args.name, args.verbose)
-    end = time.time()
-    print("elapsed time: ", (end-start))
+    # keep only relevant layer files and sort based on layer index
+    layer_files = sorted([layer_file for layer_file in layer_files if args.model + '_' + args.dataset in layer_file],
+                         key=lambda fn: int(re.search("_layer(\d+?)_", fn).group(1)), reverse=False)
+
+    for layer_file in layer_files:
+        _, _, layer_idx, layer_name = re.search(".*/(.*?).json", layer_file).group(1).split("_")
+        layer_idx = int(layer_idx.replace("layer", ""))
+        print("Beginning exploration for layer {} ({}/{})".format(
+              layer_name, layer_idx + 1, len(layer_files)))
+
+        start = time.time()
+        # get information about the current layer
+        args.network = layer_file
+        arch_info, network_info, schedule_info = cm.extract_input.extract_info(args)    
+        if args.type == "basic":
+            basic_optimizer(arch_info, network_info, schedule_info, True, args.verbose)
+        elif args.type == "mem_explore":
+            mem_explore_optimizer(arch_info, network_info, schedule_info, args.verbose)
+        elif args.type == "dataflow_explore":
+            dataflow_explore_optimizer(arch_info, network_info, args.name, args.verbose)
+        print("Completed exploration for layer {} ({}/{}) in {:.3e}s".format(
+              layer_name, layer_idx + 1, len(layer_files), time.time() - start))
 

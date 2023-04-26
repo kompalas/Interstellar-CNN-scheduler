@@ -1,6 +1,7 @@
 *.py[cod]
 *$py.class
 
+logs/
 eggs/
 .eggs/
 *.egg-info/
