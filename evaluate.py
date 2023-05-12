@@ -16,7 +16,7 @@ def main():
     assert len(energy_measurements) == total_layers
 
     total_energy = sum(energy_measurements)
-    print("Total energy:", total_energy)
+    print(f"Total energy: {total_energy:.3}")
 
     # TODO: what else can we get from the logfile?
 
